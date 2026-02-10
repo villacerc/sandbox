@@ -1,5 +1,5 @@
 import './App.css';
-import InfiniteCanvas from './pages/infiniteCanvas/InfiniteCanvas';
+import InfiniteCanvas from './pages/InfiniteCanvas';
 
 function App() {
   return (

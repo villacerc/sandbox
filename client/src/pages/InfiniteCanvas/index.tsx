@@ -15,7 +15,7 @@ export default function InfiniteCanvas() {
 
     canvas.addEventListener("wheel", e => {
       const zoomDelta: number = e.deltaY * -0.0005;
-      if(camera.current.zoom + zoomDelta < 0.05 || camera.current.zoom + zoomDelta > 5) return;
+      if(camera.current.zoom + zoomDelta < 0.20 || camera.current.zoom + zoomDelta > 5) return;
       camera.current.zoom += parseFloat(zoomDelta.toFixed(2))
     })
 
