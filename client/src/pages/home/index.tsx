@@ -1,33 +1,51 @@
-import { useRef, useState } from "react";
-const RANGE = 60;
+import { useEffect, useRef, useState } from "react";
+const RANGE = 30;
 const INTERVAL = 5;
 
 export default function Home() {
-  const [currentRange, setCurrentRange] = useState<number>(0);
+  const [currentTimeInterval, setcurrentTimeInterval] = useState<number>(0);
   const showHighlighter = useRef<boolean>(false);
   const timelineRef = useRef<HTMLDivElement>(null);
   const highlighterRef = useRef<HTMLDivElement>(null);
+  const yNormalizedInterval = useRef<number>(-1);
+  const mouseY = useRef<number>(0);
+  const rafID = useRef<number>(null);
 
-  const mouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    return requestAnimationFrame(() => {
-      if (!timelineRef.current || !highlighterRef.current) return;
-      if (!showHighlighter.current) return;
+  useEffect(() => {
+    const loop = () => {
+      if (
+        showHighlighter.current === false ||
+        !timelineRef.current ||
+        !highlighterRef.current
+      ) {
+        rafID.current = requestAnimationFrame(loop);
+        return;
+      }
 
       const rect = timelineRef.current.getBoundingClientRect();
-
-      const y = Math.max(0, e.clientY - rect.top);
+      const y = Math.max(0, mouseY.current - rect.top);
       const yNormalizedRange = Math.floor((y / rect.height) * RANGE);
-      const yNormalizedInterval =
+      const nextYNormalizedInterval =
         Math.floor(yNormalizedRange / INTERVAL) * INTERVAL;
+
       highlighterRef.current!.style.display = "flex";
       highlighterRef.current!.style.top = `${y}px`;
       //   const snappedY = (yNormalizedInterval / RANGE) * rect.height;
       //   const highlighterHeight = rect.height / (RANGE / INTERVAL);
       //   highlighterRef.current!.style.height = `${highlighterHeight}px`;
 
-      setCurrentRange(yNormalizedInterval);
-    });
-  };
+      if (yNormalizedInterval.current != nextYNormalizedInterval) {
+        yNormalizedInterval.current = nextYNormalizedInterval;
+        setcurrentTimeInterval(nextYNormalizedInterval);
+      }
+      rafID.current = requestAnimationFrame(loop);
+    };
+
+    rafID.current = requestAnimationFrame(loop);
+    return () => {
+      if (rafID.current) cancelAnimationFrame(rafID.current);
+    };
+  }, []);
 
   return (
     <div>
@@ -39,7 +57,9 @@ export default function Home() {
           highlighterRef.current!.style.display = "none";
           showHighlighter.current = false;
         }}
-        onMouseMove={mouseMove}
+        onMouseMove={(e: React.MouseEvent<HTMLDivElement>) =>
+          (mouseY.current = e.clientY)
+        }
         style={{
           width: "200px",
           height: "200px",
@@ -66,7 +86,7 @@ export default function Home() {
               transform: "translate(100%, 0)",
             }}
           >
-            {`1:${String(currentRange).padStart(2, "0")}`}
+            {`1:${String(currentTimeInterval).padStart(2, "0")}`}
           </div>
         </div>
       </div>
