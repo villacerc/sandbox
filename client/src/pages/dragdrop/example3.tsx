@@ -15,50 +15,68 @@ const default_items: Item[] = [
 
 export default function SmoothDragDelta() {
   const [items] = useState<Item[]>(default_items);
+  const [overlap, setOverlap] = useState<number | null>(null);
 
   // refs
+  const isDragging = useRef<boolean>(false);
   const draggedRef = useRef<HTMLDivElement | null>(null);
+  const draggedRefDefaultPos = useRef({ x: 0, y: 0 });
+  const draggedRefCurrentPos = useRef({ x: 0, y: 0 });
   const lastMousePos = useRef({ x: 0, y: 0 });
-  const currentPos = useRef({ x: 0, y: 0 });
-  const frameRef = useRef<number | null>(null);
+  const currentMousePos = useRef({ x: 0, y: 0 });
+  const rafID = useRef<number | null>(null);
 
   // on mousedown: store starting positions
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     draggedRef.current = e.currentTarget;
-    lastMousePos.current = { x: e.clientX, y: e.clientY };
     const rect = draggedRef.current.getBoundingClientRect();
-    currentPos.current = { x: rect.left, y: rect.top };
+
+    lastMousePos.current = { x: e.clientX, y: e.clientY };
+
+    draggedRefDefaultPos.current = { x: rect.left, y: rect.top };
+    draggedRefCurrentPos.current = { x: rect.left, y: rect.top };
 
     draggedRef.current.style.boxShadow = "0 10px 25px rgba(0,0,0,0.2)";
     draggedRef.current.style.zIndex = "99";
+
+    rafID.current = requestAnimationFrame(rafLoop);
+  };
+
+  const rafLoop = () => {
+    if (!draggedRef.current) {
+      rafID.current = requestAnimationFrame(rafLoop);
+      return;
+    }
+    // calculate delta for smooth movement
+    const deltaX = currentMousePos.current.x - lastMousePos.current.x;
+    const deltaY = currentMousePos.current.y - lastMousePos.current.y;
+    lastMousePos.current = {
+      x: currentMousePos.current.x,
+      y: currentMousePos.current.y,
+    };
+
+    draggedRefCurrentPos.current.x += deltaX;
+    draggedRefCurrentPos.current.y += deltaY;
+    draggedRef.current.style.left = `${draggedRefCurrentPos.current.x}px`;
+    draggedRef.current.style.top = `${draggedRefCurrentPos.current.y}px`;
+
+    rafID.current = requestAnimationFrame(rafLoop);
   };
 
   const onMouseMove = (e: MouseEvent) => {
-    if (!draggedRef.current) return;
-
-    // direct position update (no delta), less smooth
-    // relies on mouse coordinates from event
-    // draggedRef.current.style.top = `${e.clientY}px`;
-    // draggedRef.current.style.left = `${e.clientX}px`;
-
-    // calculate delta for smooth movement
-    const deltaX = e.clientX - lastMousePos.current.x;
-    const deltaY = e.clientY - lastMousePos.current.y;
-    lastMousePos.current = { x: e.clientX, y: e.clientY };
-
-    currentPos.current.x += deltaX;
-    currentPos.current.y += deltaY;
-
-    draggedRef.current.style.top = `${currentPos.current.y}px`;
-    draggedRef.current.style.left = `${currentPos.current.x}px`;
+    currentMousePos.current = { x: e.clientX, y: e.clientY };
   };
 
   const onMouseUp = () => {
+    if (rafID.current) cancelAnimationFrame(rafID.current);
     if (!draggedRef.current) return;
-
-    draggedRef.current.style.boxShadow = "";
+    if (!overlap) {
+      draggedRef.current.style.top = `${draggedRefDefaultPos.current.y}px`;
+      draggedRef.current.style.left = `${draggedRefDefaultPos.current.x}px`;
+    }
     draggedRef.current.style.cursor = "grab";
     draggedRef.current.style.zIndex = "";
+    draggedRef.current.style.boxShadow = "";
 
     draggedRef.current = null;
   };
@@ -68,9 +86,9 @@ export default function SmoothDragDelta() {
     window.addEventListener("mouseup", onMouseUp);
 
     return () => {
-      window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
-      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+      window.removeEventListener("mousemove", onMouseMove);
+      if (rafID.current) cancelAnimationFrame(rafID.current);
     };
   }, []);
 
