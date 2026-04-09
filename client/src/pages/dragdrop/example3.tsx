@@ -14,15 +14,23 @@ type Item = {
 };
 
 const itemOverlaps = (item1: Item, item2: Item) => {
-  const xOverlap =
-    (item1.x1 > item2.x1 && item1.x1 < item2.x2) ||
-    (item1.x2 > item2.x1 && item1.x2 < item2.x2);
+  const x1Overlaps = item1.x1 > item2.x1 && item1.x1 < item2.x2;
+  const x2Overlaps = item1.x2 > item2.x1 && item1.x2 < item2.x2;
+  const x1OverlapSize = item2.x2 - item1.x1;
+  const x2OverlapSize = item1.x2 - item2.x1;
+  const y1Overlaps = item1.y1 > item2.y1 && item1.y1 < item2.y2;
+  const y2Overlaps = item1.y2 > item2.y1 && item1.y2 < item2.y2;
+  const y1OverlapSize = item2.y2 - item1.y1;
+  const y2OverlapSize = item1.y2 - item2.y1;
 
-  const yOverlap =
-    (item1.y1 > item2.y1 && item1.y1 < item2.y2) ||
-    (item1.y2 > item2.y1 && item1.y2 < item2.y2);
+  const xOverlaps =
+    (x1Overlaps && x1OverlapSize / dimensions.width > 0.35) ||
+    (x2Overlaps && x2OverlapSize / dimensions.width > 0.35);
+  const yOverlaps =
+    (y1Overlaps && y1OverlapSize / dimensions.height > 0.35) ||
+    (y2Overlaps && y2OverlapSize / dimensions.height > 0.35);
 
-  return xOverlap && yOverlap;
+  return xOverlaps && yOverlaps;
 };
 
 const default_items: Item[] = [
