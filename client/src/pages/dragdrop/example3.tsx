@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
+const dimensions = {
+  width: 200,
+  height: 150,
+};
+
 type Item = {
   name: string;
   x1: number;
@@ -21,10 +26,28 @@ const itemOverlaps = (item1: Item, item2: Item) => {
 };
 
 const default_items: Item[] = [
-  { name: "A", x1: 0, y1: 0, x2: 200, y2: 150 },
-  { name: "B", x1: 200, y1: 0, x2: 400, y2: 150 },
-  { name: "C", x1: 0, y1: 150, x2: 200, y2: 300 },
-  { name: "D", x1: 200, y1: 150, x2: 400, y2: 300 },
+  { name: "A", x1: 0, y1: 0, x2: dimensions.width, y2: dimensions.height },
+  {
+    name: "B",
+    x1: dimensions.width,
+    y1: 0,
+    x2: dimensions.width * 2,
+    y2: dimensions.height,
+  },
+  {
+    name: "C",
+    x1: 0,
+    y1: dimensions.height,
+    x2: dimensions.width,
+    y2: dimensions.height * 2,
+  },
+  {
+    name: "D",
+    x1: dimensions.width,
+    y1: dimensions.height,
+    x2: dimensions.width * 2,
+    y2: dimensions.height * 2,
+  },
 ];
 
 export default function SmoothDragDelta() {
@@ -47,8 +70,13 @@ export default function SmoothDragDelta() {
       x: default_items[i].x1,
       y: default_items[i].y1,
     };
-    draggedRefCurrentPos.current = { ...draggedRefDefaultPos.current };
+    draggedRefCurrentPos.current = {
+      x: draggedRefDefaultPos.current.x,
+      y: draggedRefDefaultPos.current.y - 5,
+    };
 
+    draggedRef.current.style.left = `${draggedRefCurrentPos.current.x}px`;
+    draggedRef.current.style.top = `${draggedRefCurrentPos.current.y}px`;
     draggedRef.current.style.boxShadow = "0 10px 25px rgba(0,0,0,0.2)";
     draggedRef.current.style.zIndex = "99";
 
@@ -114,8 +142,8 @@ export default function SmoothDragDelta() {
       name: draggedItem.current.name,
       x1: x,
       y1: y,
-      x2: x + 200,
-      y2: y + 150,
+      x2: x + dimensions.width,
+      y2: y + dimensions.height,
     };
     for (const e of default_items) {
       if (e.name === item.name) continue;
@@ -141,8 +169,8 @@ export default function SmoothDragDelta() {
           key={item.name}
           onMouseDown={(e) => onMouseDown(e, i)}
           style={{
-            width: "200px",
-            height: "150px",
+            width: `${dimensions.width}px`,
+            height: `${dimensions.height}px`,
             position: "absolute",
             left: item.x1,
             top: item.y1,
