@@ -2,23 +2,36 @@ import { useEffect, useRef, useState } from "react";
 
 type Item = {
   name: string;
-  x: number;
-  y: number;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+};
+
+const itemOverlaps = (item1: Item, item2: Item) => {
+  const xOverlap =
+    (item1.x1 > item2.x1 && item1.x1 < item2.x2) ||
+    (item1.x2 > item2.x1 && item1.x2 < item2.x2);
+
+  const yOverlap =
+    (item1.y1 > item2.y1 && item1.y1 < item2.y2) ||
+    (item1.y2 > item2.y1 && item1.y2 < item2.y2);
+
+  return xOverlap && yOverlap;
 };
 
 const default_items: Item[] = [
-  { name: "A", x: 50, y: 50 },
-  { name: "B", x: 200, y: 50 },
-  { name: "C", x: 50, y: 150 },
-  { name: "D", x: 200, y: 150 },
+  { name: "A", x1: 0, y1: 0, x2: 200, y2: 150 },
+  { name: "B", x1: 200, y1: 0, x2: 400, y2: 150 },
+  { name: "C", x1: 0, y1: 150, x2: 200, y2: 300 },
+  { name: "D", x1: 200, y1: 150, x2: 400, y2: 300 },
 ];
 
 export default function SmoothDragDelta() {
   const [items] = useState<Item[]>(default_items);
   const [overlap, setOverlap] = useState<number | null>(null);
 
-  // refs
-  const isDragging = useRef<boolean>(false);
+  const draggedItem = useRef<Item | null>(null);
   const draggedRef = useRef<HTMLDivElement | null>(null);
   const draggedRefDefaultPos = useRef({ x: 0, y: 0 });
   const draggedRefCurrentPos = useRef({ x: 0, y: 0 });
@@ -26,15 +39,15 @@ export default function SmoothDragDelta() {
   const currentMousePos = useRef({ x: 0, y: 0 });
   const rafID = useRef<number | null>(null);
 
-  // on mousedown: store starting positions
-  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>, i: number) => {
+    draggedItem.current = items[i];
     draggedRef.current = e.currentTarget;
-    const rect = draggedRef.current.getBoundingClientRect();
-
     lastMousePos.current = { x: e.clientX, y: e.clientY };
-
-    draggedRefDefaultPos.current = { x: rect.left, y: rect.top };
-    draggedRefCurrentPos.current = { x: rect.left, y: rect.top };
+    draggedRefDefaultPos.current = {
+      x: default_items[i].x1,
+      y: default_items[i].y1,
+    };
+    draggedRefCurrentPos.current = { ...draggedRefDefaultPos.current };
 
     draggedRef.current.style.boxShadow = "0 10px 25px rgba(0,0,0,0.2)";
     draggedRef.current.style.zIndex = "99";
@@ -47,18 +60,19 @@ export default function SmoothDragDelta() {
       rafID.current = requestAnimationFrame(rafLoop);
       return;
     }
-    // calculate delta for smooth movement
     const deltaX = currentMousePos.current.x - lastMousePos.current.x;
     const deltaY = currentMousePos.current.y - lastMousePos.current.y;
+
     lastMousePos.current = {
       x: currentMousePos.current.x,
       y: currentMousePos.current.y,
     };
-
     draggedRefCurrentPos.current.x += deltaX;
     draggedRefCurrentPos.current.y += deltaY;
     draggedRef.current.style.left = `${draggedRefCurrentPos.current.x}px`;
     draggedRef.current.style.top = `${draggedRefCurrentPos.current.y}px`;
+
+    checkItemOverlaps();
 
     rafID.current = requestAnimationFrame(rafLoop);
   };
@@ -78,6 +92,7 @@ export default function SmoothDragDelta() {
     draggedRef.current.style.zIndex = "";
     draggedRef.current.style.boxShadow = "";
 
+    draggedItem.current = null;
     draggedRef.current = null;
   };
 
@@ -92,19 +107,45 @@ export default function SmoothDragDelta() {
     };
   }, []);
 
+  const checkItemOverlaps = () => {
+    if (!draggedItem.current) return;
+    const { x, y } = draggedRefCurrentPos.current;
+    const item: Item = {
+      name: draggedItem.current.name,
+      x1: x,
+      y1: y,
+      x2: x + 200,
+      y2: y + 150,
+    };
+    for (const e of default_items) {
+      if (e.name === item.name) continue;
+      if (itemOverlaps(item, e)) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   return (
-    <div>
-      {items.map((item) => (
+    <div
+      style={{
+        position: "relative",
+        width: "400px",
+        height: "300px",
+        border: "1px solid #ccc",
+        display: "grid",
+      }}
+    >
+      {items.map((item, i) => (
         <div
           key={item.name}
-          onMouseDown={onMouseDown}
+          onMouseDown={(e) => onMouseDown(e, i)}
           style={{
-            width: "100px",
-            height: "50px",
-            position: "fixed",
-            left: item.x,
-            top: item.y,
-            padding: "5px",
+            width: "200px",
+            height: "150px",
+            position: "absolute",
+            left: item.x1,
+            top: item.y1,
             border: "1px solid black",
             cursor: "grab",
             background: "#fff",
